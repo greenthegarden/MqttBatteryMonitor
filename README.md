@@ -24,7 +24,7 @@ Redbear Duo is installed on a
 
 ### Voltage Sensor
 
-[0-25V Voltage Sensor Module](https://how2electronics.com/interfacing-0-25v-dc-voltage-sensor-with-arduino/) is utilised to monitor the battery voltage which has the following thresholds, which are within the 16 volt limit when using he sensor with a 3.3 volt microprocessor, as in this case.
+[0-25V Voltage Sensor Module](https://how2electronics.com/interfacing-0-25v-dc-voltage-sensor-with-arduino/) is utilised to monitor the battery voltage which has the following thresholds, which are within the 16 volt limit when using the sensor with a 3.3 volt microprocessor, as in this case.
 
 | Charge Level | Voltage |
 | ------------ | ------- |
@@ -35,7 +35,7 @@ Redbear Duo is installed on a
 
 ### Current Sensor
 
-A [ACS712: Hall-Effect-Based Linear Current Sensor](https://www.allegromicro.com/en/Products/Sense/Current-Sensor-ICs/Zero-To-Fifty-Amp-Integrated-Conductor-Sensor-ICs/ACS712) is utilised to measure the solar panel current. A 350Watt panel is utilised which limits current to 30Amps. The [ACS712](https://github.com/RobTillaart/ACS712) library is used to get the measurements from the sensor.
+A [ACS712: Hall-Effect-Based Linear Current Sensor](https://www.allegromicro.com/en/Products/Sense/Current-Sensor-ICs/Zero-To-Fifty-Amp-Integrated-Conductor-Sensor-ICs/ACS712) is utilised to measure the solar panel current. A 350Watt panel is utilised which limits current to 30Amps. The [ACS712](https://github.com/RobTillaart/ACS712) library is used to get the measurements from the sensor. More information is available from [Arduino](https://create.arduino.cc/projecthub/instrumentation-system/acs712-current-sensor-87b4a6)
 
 ## Software
 
@@ -82,24 +82,25 @@ HAMqttDevice solarpanel_350watt_current("Solar 350watt Current", HAMqttDevice::S
 
 ### Device
 
-Config Topic: `homeassistant/sensor/duo_solar_monitor_state/config`
+Config Topic: `ha/sensor/duo_solar_monitor_state/config`
 
 Config Message structure:
 
 ```json
 {
-  "~": "homeassistant/sensor/duo_solar_monitor_state",
-  "name": "Duo Solar Monitor State",
-  "unique_id": "duo_solar_monitor_state",
-  "stat_t": "~/state",
-  "json_attr_t": "~/attr",
-  "stat_cla": "measurement",
-  "unit_of_meas": "bytes",
-  "dev": {
+  "~":"ha/sensor/duo_solar_monitor_state",
+  "name":"Duo Solar Monitor State",
+  "unique_id":"duo_solar_monitor_state",
+  "stat_t":"~/state",
+  "json_attr_t":"~/attr",
+  "stat_cla":"measurement",
+  "val_tpl":"{{ value | int(0) }}",
+  "unit_of_meas":"bytes",
+  "dev":{
     "ids": "duo_solar_monitor",
-    "name": "Solar Monitor",
+    "name": "Duo Solar Monitor",
     "mdl": "Duo",
-    "sa": "back_veranda",
+    "sa": "outside_kitchen",
     "mf": "Redbear"
   }
 }
@@ -107,171 +108,100 @@ Config Message structure:
 
 Attribute Topic: `homeassistant/sensor/duo_solar_monitor_state/attr`
 
-Attribute Message structure: 
+Attribute Message structure:
+
 
 ```json
 {
-  "sample_interval": "60",
-  "ssid": "videoAtHome-2.4g",
-  "ip_address": "192.168.1.165",
-  "mac_address": "94:a1:a2:fd:71:f5",
-  "client_id": "duo_moisture_94a1a2fd71f5"
+  "sample_interval":"15",
+  "ssid":"videoAtHome-2.4g",
+  "ip_address":"192.168.1.145",
+  "mac_address":"94:a1:a2:fd:73:67",
+  "client_id":"duo_battery_94a1a2fd7367"
 }
 ```
 
-State Topic: `homeassistant/sensor/soil_device_memory/state`
+State Topic: `ha/sensor/duo_solar_monitor_state/state`
 
 State Message structure: int
 
-### Soil Temperature
+### Battery Voltage
 
-Config Topic: `homeassistant/sensor/soil_sht10_temperature/config`
+Config Topic: `ha/sensor/thumper_80ah_voltage/config`
 
 Config Message structure:
 
 ```json
 {
-  "~": "homeassistant/sensor/soil_sht10_temperature",
-  "name": "Soil SHT10 Temperature",
-  "unique_id": "soil_sht10_temperature",
-  "dev_cla": "temperature",
-  "stat_cla": "measurement",
-  "unit_of_meas": "°C",
-  "stat_t": "duo/sensor/soil_sht10",
-  "val_tpl": "{{ value_json.temperature | int(0) }}",
+  "~":"ha/sensor/thumper_80ah_voltage",
+  "name":"Thumper 80ah Voltage",
+  "unique_id":"thumper_80ah_voltage",
+  "stat_t":"~/state",
+  "dev_cla":"voltage",
+  "stat_cla":"measurement",
+  "unit_of_meas":"V",
+  "val_tpl":"{{ value | float(0.0) }}",
   "dev":{
-    "ids": "temp_hum_sensor",
-    "name": "Moisture Sensor",
-    "mdl": "SHT10",
-    "sa": "garden",
-    "mf": "Seeed"
-  }
-}
-```
-
-State Topic: `duo/sensor/soil_sht10`
-
-State Message structure: 
-
-```json
-{
-  "temperature": 24.75,
-  "humidity": 68.517
-}
-```
-
-### Soil Humidity
-
-Config Topic: `homeassistant/sensor/soil_sht10_humidity/config`
-
-Config Message structure:
-
-```json
-{
-  "~": "homeassistant/sensor/soil_sht10_humidity",
-  "name": "Soil SHT10 Humidity",
-  "unique_id": "soil_sht10_humidity",
-  "dev_cla": "humidity",
-  "stat_cla": "measurement",
-  "unit_of_meas": "%",
-  "stat_t": "duo/sensor/soil_sht10",
-  "val_tpl": "{{ value_json.humidity | int(0) }}",
-  "dev": {
-    "ids": "temp_hum_sensor",
-    "name": "Moisture Sensor",
-    "mdl": "SHT10",
-    "sa": "garden",
-    "mf": "Seeed"
-  }
-}
-```
-
-State Topic: `duo/sensor/soil_sht10`
-
-State Message structure:
-
-```json
-{
-  "temperature": 24.75,
-  "humidity": 68.517
-}
-```
-
-### Soil Moisture Sensor 1
-
-Config Topic: `homeassistant/sensor/soil_moisture_1/config`
-
-Config Message structure:
-
-```json
-{
-  "~": "homeassistant/sensor/soil_moisture_1",
-  "name": "Soil Moisture 1",
-  "unique_id": "soil_moisture_1",
-  "stat_t": "~/state",
-  "stat_cla": "measurement",
-  "val_tpl": "{{ value | int(0) }}",
-  "dev": {
-    "ids": "moisture_sensor_1",
-    "name": "Capacitive Soil Moisture Sensor",
-    "mdl": "V1.2",
-    "sa": "garden",
-    "mf": "DIYMORE.CC"
+    "ids": "battery_voltage",
+    "name": "25V Voltage Divider",
+    "mdl": "25V",
+    "sa": "outside_kitchen",
+    "mf": "MH-Electronic"
   },
-  "json_attr_t": "~/attr"
+  "json_attr_t":"~/attr"
 }
 ```
 
-Attribute Topic: `homeassistant/sensor/soil_moisture_1/attr`
+Attribute Topic: `ha/sensor/thumper_80ah_voltage/attr`
 
-Attribute Message structure:
+Attribute Topic structure:
 
 ```json
 {
-  "pin_data": "11",
-  "power_pin": "1"
+  "pin_data":"10"
 }
 ```
 
-State Topic: `homeassistant/sensor/soil_moisture_1/state`
+State Topic: `ha/sensor/thumper_80ah_voltage/state`
 
-State Message structure: int
+State Message structure: float
 
-### Soil Moisture Sensor 2
+### Solar Current
 
-Config Topic: `homeassistant/sensor/soil_moisture_2/config`
+Config Topic: `ha/sensor/solar_350watt_current/config`
 
 Config Message structure:
 
 ```json
 {
-  "~": "homeassistant/sensor/soil_moisture_2",
-  "name": "Soil Moisture 2",
-  "unique_id": "soil_moisture_2",
-  "stat_t": "~/state",
-  "stat_cla": "measurement",
-  "val_tpl": "{{ value | int(0) }}",
+  "~":"ha/sensor/solar_350watt_current",
+  "name":"Solar 350watt Current",
+  "unique_id":"solar_350watt_current",
+  "stat_t":"~/state",
+  "dev_cla":"current",
+  "stat_cla":"measurement",
+  "unit_of_meas":"A",
+  "val_tpl":"{{ value | float(0.0) }}",
   "dev": {
-    "ids": "moisture_sensor_2",
-    "name": "Capacitive Soil Moisture Sensor",
-    "mdl": "V1.2",
-    "sa": "garden",
-    "mf": "DIYMORE.CC"
-  }
+    "ids": "solar_current",
+    "name": "ACS712 Current",
+    "mdl": "30A",
+    "sa": "outside_kitchen",
+    "mf": "duinotech"},
+  "json_attr_t":"~/attr"
 }
 ```
 
-Attribute Topic: `homeassistant/sensor/soil_moisture_2/attr`
+Attribute Topic: `ha/sensor/solar_350watt_current/attr`
 
 Attribute Message structure:
 
 ```json
 {
-  "pin_data": "13",
-  "power_pin": "2"
+  "pin_data":"14"
 }
 ```
 
-State Topic: `homeassistant/sensor/soil_moisture_2/state`
+State Topic: `ha/sensor/solar_350watt_current/state`
 
-State Message structure: int
+State Message structure: float

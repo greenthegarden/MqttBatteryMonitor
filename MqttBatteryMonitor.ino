@@ -63,7 +63,10 @@ SYSTEM_MODE(SEMI_AUTOMATIC);
 #define USE_SLEEP false
 #endif
 
-// set to true to run test => will not sleep
+// set to true to run test
+//    will not sleep
+//    uses a different HA_MQTT_PREFIX to prevent publishing to homeassistant
+//    uses a different SAMPLE_INTERVAL
 #ifndef TEST_MODE
 #define TEST_MODE true
 #endif
@@ -120,7 +123,11 @@ MQTT client(BROKER_IP, BROKER_PORT, PAYLOAD_LENGTH, KEEP_ALIVE, callback);
 
 #include "HAMqttDevice.h"
 
+#if TEST_MODE
+char HA_MQTT_PREFIX[] = "ha";
+# else
 char HA_MQTT_PREFIX[] = "homeassistant";
+#endif
 
 HAMqttDevice duo_solar_monitor_state("Duo Solar Monitor State", HAMqttDevice::SENSOR, String(HA_MQTT_PREFIX));
 HAMqttDevice battery_thumper_80ah_voltage("Thumper 80ah Voltage", HAMqttDevice::SENSOR, String(HA_MQTT_PREFIX));
@@ -159,7 +166,7 @@ void deviceConfig()
       .addConfigVar("stat_cla", "measurement")
       .addConfigVar("val_tpl", "{{ value | int(0) }}")
       .addConfigVar("unit_of_meas", "bytes")
-      .addConfigVar("dev", "{\"ids\": \"duo_solar_monitor\", \"name\": \"Solar Monitor\", \"mdl\": \"Duo\", \"sa\": \"back_veranda\", \"mf\": \"Redbear\"}");
+      .addConfigVar("dev", "{\"ids\": \"duo_solar_monitor\", \"name\": \"Duo Solar Monitor\", \"mdl\": \"Duo\", \"sa\": \"back_veranda\", \"mf\": \"Redbear\"}");
   duo_solar_monitor_state
       .addAttribute("sample_interval", String(SAMPLE_INTERVAL / 1000))
       .addAttribute("ssid", String(WiFi.SSID()))
@@ -187,7 +194,7 @@ float adc_voltage = 0.0;
 float in_voltage = 0.0;
 
 // Resistor values in voltage divider (Ohms)
-const float R1 = 3000.0;
+const float R1 = 30000.0;
 const float R2 = 7500.0;
 
 // ADC value
@@ -202,8 +209,8 @@ void voltageSensorConfig() {
       .addConfigVar("dev_cla", "voltage")
       .addConfigVar("stat_cla", "measurement")
       .addConfigVar("unit_of_meas", "V")
-      .addConfigVar("val_tpl", "{{ value | int(0) }}")
-      .addConfigVar("dev", "{\"ids\": \"battery_voltage\", \"name\": \"Voltage Divider\", \"mdl\": \"V1.2\", \"sa\": \"garden\", \"mf\": \"DIYMORE.CC\"}");
+      .addConfigVar("val_tpl", "{{ value | float(0.0) }}")
+      .addConfigVar("dev", "{\"ids\": \"battery_voltage\", \"name\": \"25V Voltage Divider\", \"mdl\": \"25V\", \"sa\": \"outside_kitchen\", \"mf\": \"MH-Electronic\"}");
   battery_thumper_80ah_voltage.enableAttributesTopic();
   battery_thumper_80ah_voltage
       .addAttribute("pin_data", String(VOLTAGE_SENSOR_PIN));
@@ -243,21 +250,21 @@ unsigned long acs712PreviousMillis = 0UL;
 // ACS712 5A  uses 185 mV per A
 // ACS712 20A uses 100 mV per A
 // ACS712 30A uses  66 mV per A
-ACS712 ACS(CURRENT_SENSOR_PIN, DUO_REF_VOLTAGE, (DUO_ADC_RANGE - 1), 66);
+ACS712 ACS(CURRENT_SENSOR_PIN, DUO_REF_VOLTAGE, DUO_ADC_RANGE, 66);
 
 void acs712Config() {
   // set data pins as imputs
   pinMode(CURRENT_SENSOR_PIN, INPUT);
 
-  ACS.autoMidPoint();
+  // ACS.autoMidPoint();
 
   solarpanel_350watt_current.enableStateTopic();
   solarpanel_350watt_current
       .addConfigVar("dev_cla", "current")
       .addConfigVar("stat_cla", "measurement")
       .addConfigVar("unit_of_meas", "A")
-      .addConfigVar("val_tpl", "{{ value | int(0) }}")
-      .addConfigVar("dev", "{\"ids\": \"solar_current\", \"name\": \"ACS712 Current\", \"mdl\": \"V1.2\", \"sa\": \"garden\", \"mf\": \"DIYMORE.CC\"}");
+      .addConfigVar("val_tpl", "{{ value | float(0.0) }}")
+      .addConfigVar("dev", "{\"ids\": \"solar_current\", \"name\": \"ACS712 Current\", \"mdl\": \"30A\", \"sa\": \"outside_kitchen\", \"mf\": \"duinotech\"}");
   solarpanel_350watt_current.enableAttributesTopic();
   solarpanel_350watt_current
       .addAttribute("pin_data", String(CURRENT_SENSOR_PIN));
@@ -266,7 +273,7 @@ void acs712Config() {
 void acs712Measurement()
 {
   // read value from the sensor
-  float acs712_current = -1 * (double)ACS.mA_DC() / 1000.0;
+  float acs712_current = (float)ACS.mA_DC() / 1000.0;
 
   // publish reading
   String topic;
@@ -351,15 +358,7 @@ void loop() {
     voltageMeasurement();
     acs712Measurement();
   }
-  #if TEST_MODE
-    delay(SAMPLE_INTERVAL);
-  #else
-    #if USE_SLEEP
-      // Sleep system for SLEEP_DURATION seconds
-      System.sleep(SLEEP_MODE_DEEP, SAMPLE_INTERVAL);
-    #else
-      delay(SAMPLE_INTERVAL);
-    #endif
-  #endif
+
+  delay(SAMPLE_INTERVAL);
 
 }
