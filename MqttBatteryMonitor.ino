@@ -1,13 +1,13 @@
-/* 
- * Defaultly disabled. More details: https://docs.particle.io/reference/firmware/photon/#system-thread 
+/*
+ * Defaultly disabled. More details: https://docs.particle.io/reference/firmware/photon/#system-thread
  */
 //SYSTEM_THREAD(ENABLED);
 
 /*
  * Defaultly disabled. If BLE setup is enabled, when the Duo is in the Listening Mode, it will de-initialize and re-initialize the BT stack.
  * Then it broadcasts as a BLE peripheral, which enables you to set up the Duo via BLE using the RedBear Duo App or customized
- * App by following the BLE setup protocol: https://github.com/redbear/Duo/blob/master/docs/listening_mode_setup_protocol.md#ble-peripheral 
- * 
+ * App by following the BLE setup protocol: https://github.com/redbear/Duo/blob/master/docs/listening_mode_setup_protocol.md#ble-peripheral
+ *
  * NOTE: If enabled and upon/after the Duo enters/leaves the Listening Mode, the BLE functionality in your application will not work properly.
  */
 //BLE_SETUP(ENABLED);
@@ -17,13 +17,13 @@
  *     - AUTOMATIC: Automatically try to connect to Wi-Fi and the Particle Cloud and handle the cloud messages.
  *     - SEMI_AUTOMATIC: Manually connect to Wi-Fi and the Particle Cloud, but automatically handle the cloud messages.
  *     - MANUAL: Manually connect to Wi-Fi and the Particle Cloud and handle the cloud messages.
- *     
- * SYSTEM_MODE(AUTOMATIC) does not need to be called, because it is the default state. 
+ *
+ * SYSTEM_MODE(AUTOMATIC) does not need to be called, because it is the default state.
  * However the user can invoke this method to make the mode explicit.
  * Learn more about system modes: https://docs.particle.io/reference/firmware/photon/#system-modes .
  */
-#if defined(ARDUINO) 
-SYSTEM_MODE(SEMI_AUTOMATIC); 
+#if defined(ARDUINO)
+SYSTEM_MODE(SEMI_AUTOMATIC);
 #endif
 
 // Simple test of using sleep(SLEEP_MODE_DEEP, 30). This halts execution of your code, and when it
@@ -103,7 +103,7 @@ String client_id;
 
 // This is called when a message is received. However, we do not use this feature in
 // this project so it will be left empty
-void callback(char* topic, byte* payload, unsigned int length) 
+void callback(char* topic, byte* payload, unsigned int length)
 {}
 
 /**
@@ -250,7 +250,7 @@ unsigned long acs712PreviousMillis = 0UL;
 // ACS712 5A  uses 185 mV per A
 // ACS712 20A uses 100 mV per A
 // ACS712 30A uses  66 mV per A
-ACS712 ACS(CURRENT_SENSOR_PIN, DUO_REF_VOLTAGE, DUO_ADC_RANGE, 66);
+ACS712 ACS(CURRENT_SENSOR_PIN, DUO_REF_VOLTAGE, DUO_ADC_RANGE, 66.0);
 
 void acs712Config() {
   // set data pins as imputs
@@ -317,7 +317,7 @@ void setup() {
   // connect to broker with unique client ID based on MAC address
   client_id = String(CLIENTID) + "_" + macAddressToString(false);
   String willTopic = String("duo") + String("/") + macAddressToString(false) + String("/status");
- 
+
   // client.connect(client_id);
   // return connect(id, NULL, NULL, 0, QOS0, 0, 0, true);
   // connect(id, user, pass, 0, QOS0, 0, 0, true);
