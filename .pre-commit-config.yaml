@@ -12,7 +12,7 @@ repos:
       - id: check-json
       - id: check-merge-conflict
       - id: check-symlinks
-      # - id: check-yaml
+      - id: check-yaml
       - id: end-of-file-fixer
       - id: fix-byte-order-marker
       - id: mixed-line-ending

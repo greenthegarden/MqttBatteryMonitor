@@ -172,7 +172,9 @@ void deviceConfig()
       .addAttribute("ssid", String(WiFi.SSID()))
       .addAttribute("ip_address", String(WiFi.localIP()))
       .addAttribute("mac_address", macAddressToString())
-      .addAttribute("client_id", client_id);
+      .addAttribute("client_id", client_id)
+      .addAttribute("voltage_ref", String(DUO_REF_VOLTAGE))
+      .addAttribute("adc_range", String(DUO_ADC_RANGE));
 }
 
 void devicePublish()
@@ -231,6 +233,21 @@ void voltageMeasurement()
   String topic;
   topic = battery_thumper_80ah_voltage.getStateTopic();
   client.publish(topic, String(in_voltage));
+
+#if TEST_MODE
+  char VOLTAGE_DIVIDER_TEST_TOPIC[] = "test/duo/sensor/voltage_divider";
+  payload[0] = '\0';
+  // create payload
+  JSONBufferWriter writer(payload, sizeof(payload));
+  writer.beginObject();
+  writer.name("adc_value").value(adc_value);
+  writer.name("adc_voltage").value(adc_voltage);
+  writer.name("in_voltage").value(in_voltage);
+  writer.endObject();
+  writer.buffer()[min(writer.bufferSize(), writer.dataSize())] = 0;
+  // publish reading
+  client.publish(VOLTAGE_DIVIDER_TEST_TOPIC, payload);
+#endif
 }
 
 /*
@@ -279,6 +296,20 @@ void acs712Measurement()
   String topic;
   topic = solarpanel_350watt_current.getStateTopic();
   client.publish(topic, String(acs712_current));
+
+#if TEST_MODE
+  char ACS712_TEST_TOPIC[] = "test/duo/sensor/acs712";
+  payload[0] = '\0';
+  // create payload
+  JSONBufferWriter writer(payload, sizeof(payload));
+  writer.beginObject();
+  writer.name("adc_value").value(analogRead(CURRENT_SENSOR_PIN));
+  writer.name("acs712_current").value(acs712_current);
+  writer.endObject();
+  writer.buffer()[min(writer.bufferSize(), writer.dataSize())] = 0;
+  // publish reading
+  client.publish(ACS712_TEST_TOPIC, payload);
+#endif
 }
 
 /*
