@@ -30,7 +30,6 @@ repos:
     hooks:
       - id: markdownlint
         types: [markdown]
-        exclude: ./roles
 
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook.git
     rev: "v9.0.0"

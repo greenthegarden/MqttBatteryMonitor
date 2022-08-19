@@ -1,4 +1,4 @@
-# MQTT Solar and Battery Monitor
+# Redbear Duo MQTT Solar and Battery Monitor
 
 Project to use a [Redbear Duo](https://github.com/redbear/Duo) microprocessing board to gather and publish solar current and battery voltage via MQTT. The structure of the topics are compatible with [Home Assistant MQTT Discovery](https://www.home-assistant.io/docs/mqtt/discovery/).
 
@@ -6,7 +6,7 @@ Project to use a [Redbear Duo](https://github.com/redbear/Duo) microprocessing b
 
 ### Redbear Duo
 
-The [Redbear Duo](https://github.com/redbear/Duo) was acquired via a [Kickstarter campaign](https://www.kickstarter.com/projects/redbearinc/redbear-duo-a-small-and-powerful-wi-fi-ble-iot-boa). The board is compatible with Particle boards. Information about using MQTT with Particle Boards is provided at https://www.digikey.jp/ja/maker/projects/how-to-build-a-photon-mqtt-logger/876ce49a8f914f0799a0f8b94519acc1.
+The [Redbear Duo](https://github.com/redbear/Duo) was acquired via a [Kickstarter campaign](https://www.kickstarter.com/projects/redbearinc/redbear-duo-a-small-and-powerful-wi-fi-ble-iot-boa). The board is compatible with Particle boards so utilised [information about using MQTT with Particle Boards](https://www.digikey.jp/ja/maker/projects/how-to-build-a-photon-mqtt-logger/876ce49a8f914f0799a0f8b94519acc1).
 
 LED Status Indicators
 
@@ -14,13 +14,13 @@ LED Status Indicators
 | ------------- | --------- |
 | flashing blue | listening mode |
 | flashing green | attempting connection to access point |
-| pulsing green | 
+| pulsing green |
 | solid green | listening mode |
 | solid yellow | |
 
 ### Hardware Layout
 
-Redbear Duo is installed on a 
+Redbear Duo is installed on a
 
 ### Voltage Sensor
 
@@ -31,17 +31,17 @@ Redbear Duo is installed on a
 | Full (100%)  | 12.7    |
 | 80%          | 12.5    |
 | 50%          | 12.2    |
-| Flat         | 11.8    |
+| Flat         | 10.5    |
 
 ### Current Sensor
 
-A [ACS712: Hall-Effect-Based Linear Current Sensor](https://www.allegromicro.com/en/Products/Sense/Current-Sensor-ICs/Zero-To-Fifty-Amp-Integrated-Conductor-Sensor-ICs/ACS712) is utilised to measure the solar panel current. A 350Watt panel is utilised which limits current to 30Amps. The [ACS712](https://github.com/RobTillaart/ACS712) library is used to get the measurements from the sensor. More information is available from [Arduino](https://create.arduino.cc/projecthub/instrumentation-system/acs712-current-sensor-87b4a6)
+A [ACS712: Hall-Effect-Based Linear Current Sensor](https://www.allegromicro.com/en/Products/Sense/Current-Sensor-ICs/Zero-To-Fifty-Amp-Integrated-Conductor-Sensor-ICs/ACS712) is utilised to measure the solar panel current. A 350Watt panel is utilised which limits current to 30Amps. The [ACS712](https://github.com/RobTillaart/ACS712) library is used to get the measurements from the sensor. More information is available from [Arduino](https://create.arduino.cc/projecthub/instrumentation-system/acs712-current-sensor-87b4a6).
 
 ## Software
 
-The [Arduino IDE](https://www.arduino.cc/en/software) is required to be used to support the Redbear Duo board. I was not able to add the board definition to the [PlatformIO](https://platformio.org/) my preferred Arduino development platform. Support the the Redbear Duo board is by following the [installation guide](<https://github.com/redbear/Duo/blob/master/docs/arduino_board_package_installation_guide.md).
+The [Arduino IDE](https://www.arduino.cc/en/software) is required to be used to support the Redbear Duo board. I was not able to add the board definition to the [PlatformIO](https://platformio.org/) my preferred Arduino development platform. Support the the Redbear Duo board is by following the [installation guide](https://github.com/redbear/Duo/blob/master/docs/arduino_board_package_installation_guide.md).
 
-The source code for the project is hosted at https://github.com/greenthegarden/RedbearDuoMqttMoisturePublisher.
+The source code for the project is hosted on [Github](https://github.com/greenthegarden/RedbearDuoMqttMoisturePublisher).
 
 Before compiling the code, add a file named `secrets.h` to the root project directory with the following format
 
@@ -62,7 +62,11 @@ char DEVICE_ID[] = "3a001d000d47353033323637";
 
 The project uses modified versions of the following libraries. Due to the modifications made the library source code has been added directly to this project. A script, `libraries/get_libraries.sh` had been provided to get updated copies of the libraries.
 
-### HAMqttDevice
+### Scheduler
+
+Scheduler project hosted on [Github](https://github.com/arduino-libraries/Scheduler.git).
+
+### Home Assistant Discovery
 
 The [HAMqttDevice library](https://www.arduino.cc/reference/en/libraries/hamqttdevice/) is used to provide support for [Home Assistant](https://www.home-assistant.io/) [MQTT Discovery](https://www.home-assistant.io/docs/mqtt/discovery/). It has been modified to support the Particle version of the Vector library utilised by the Redbear Duo.
 
@@ -109,7 +113,6 @@ Config Message structure:
 Attribute Topic: `homeassistant/sensor/duo_solar_monitor_state/attr`
 
 Attribute Message structure:
-
 
 ```json
 {

@@ -77,7 +77,7 @@ const unsigned long SAMPLE_INTERVAL = 15UL * 1000UL; // 15 seconds
 #else
 const unsigned long SAMPLE_INTERVAL = 1UL * 60UL * 1000UL; // 1 minutes
 #endif
-
+unsigned long samplePreviousMillis = 0UL;
 
 /*
  *************** Configure Duo ***************
@@ -85,7 +85,17 @@ const unsigned long SAMPLE_INTERVAL = 1UL * 60UL * 1000UL; // 1 minutes
 
 const int DUO_BLUE_LED = D7;
 const float DUO_REF_VOLTAGE = 3.3;
-const unsigned int DUO_ADC_RANGE = 1024;
+const unsigned int DUO_ADC_RESOLUTION = 12; //12-bit resolution
+const unsigned int DUO_ADC_RANGE = 4096; // TODO: have a map for this
+
+/*
+ * The device has 8 channels (A0 to A7) with a 12 - bit resolution.
+ * This means that it will map input voltages between 0 and 3.3 volts
+ * into integer values between 0 and 4095.
+ * This yields a resolution between readings of :
+ * 3.3 volts / 4096 units or,
+ * 0.0008 volts(0.8 mV) per unit.
+ */
 
 /*
  *************** Configure MQTT ***************
@@ -100,6 +110,7 @@ const unsigned int KEEP_ALIVE = 60;
 char payload[PAYLOAD_LENGTH];
 
 String client_id;
+String willTopic;
 
 // This is called when a message is received. However, we do not use this feature in
 // this project so it will be left empty
@@ -107,6 +118,7 @@ void callback(char* topic, byte* payload, unsigned int length)
 {}
 
 /**
+ * https://docs.particle.io/reference/device-os/api/input-output/analogread-adc/
  * if want to use IP address,
  * const uint8_t server[] = { XXX,XXX,XXX,XXX };
  * MQTT client(server, 1883, callback);
@@ -116,6 +128,26 @@ void callback(char* topic, byte* payload, unsigned int length)
  **/
 // MQTT(const char *domain, uint16_t port, int maxpacketsize, int keepalive, void (*callback)(char *, uint8_t *, unsigned int), bool thread = false);
 MQTT client(BROKER_IP, BROKER_PORT, PAYLOAD_LENGTH, KEEP_ALIVE, callback);
+
+unsigned long lastReconnectAttempt = 0;
+
+boolean connect() {
+  client.connect(client_id, NULL, NULL, willTopic, MQTT::EMQTT_QOS::QOS0, 0, "offline", true);
+
+  if (client.isConnected())
+  {
+    client.publish(willTopic, "online", true);
+
+    code_debug_print("Connected to broker");
+
+    // device memory configuration
+    // needs to occur after connection to network
+    deviceConfig();
+
+    return true;
+  }
+  return false;
+}
 
 /*
  *************** Configure Home Assistant Integration ***************
@@ -203,9 +235,6 @@ const float R2 = 7500.0;
 int adc_value = 0;
 
 void voltageSensorConfig() {
-  // set data pins as imputs
-  pinMode(VOLTAGE_SENSOR_PIN, INPUT);
-
   battery_thumper_80ah_voltage.enableStateTopic();
   battery_thumper_80ah_voltage
       .addConfigVar("dev_cla", "voltage")
@@ -270,17 +299,12 @@ unsigned long acs712PreviousMillis = 0UL;
 ACS712 ACS(CURRENT_SENSOR_PIN, DUO_REF_VOLTAGE, DUO_ADC_RANGE, 66.0);
 
 void acs712Config() {
-  // set data pins as imputs
-  pinMode(CURRENT_SENSOR_PIN, INPUT);
-
-  // ACS.autoMidPoint();
-
   solarpanel_350watt_current.enableStateTopic();
   solarpanel_350watt_current
       .addConfigVar("dev_cla", "current")
       .addConfigVar("stat_cla", "measurement")
-      .addConfigVar("unit_of_meas", "A")
-      .addConfigVar("val_tpl", "{{ value | float(0.0) }}")
+      .addConfigVar("unit_of_meas", "mA")
+      .addConfigVar("val_tpl", "{{ value | int(0) }}")
       .addConfigVar("dev", "{\"ids\": \"solar_current\", \"name\": \"ACS712 Current\", \"mdl\": \"30A\", \"sa\": \"outside_kitchen\", \"mf\": \"duinotech\"}");
   solarpanel_350watt_current.enableAttributesTopic();
   solarpanel_350watt_current
@@ -290,7 +314,7 @@ void acs712Config() {
 void acs712Measurement()
 {
   // read value from the sensor
-  float acs712_current = (float)ACS.mA_DC() / 1000.0;
+  int acs712_current = ACS.mA_DC();
 
   // publish reading
   String topic;
@@ -301,9 +325,10 @@ void acs712Measurement()
   char ACS712_TEST_TOPIC[] = "test/duo/sensor/acs712";
   payload[0] = '\0';
   // create payload
+  float adc_value = analogRead(CURRENT_SENSOR_PIN);
   JSONBufferWriter writer(payload, sizeof(payload));
   writer.beginObject();
-  writer.name("adc_value").value(analogRead(CURRENT_SENSOR_PIN));
+  writer.name("adc_value").value(adc_value);
   writer.name("acs712_current").value(acs712_current);
   writer.endObject();
   writer.buffer()[min(writer.bufferSize(), writer.dataSize())] = 0;
@@ -347,49 +372,86 @@ void setup() {
 
   // connect to broker with unique client ID based on MAC address
   client_id = String(CLIENTID) + "_" + macAddressToString(false);
-  String willTopic = String("duo") + String("/") + macAddressToString(false) + String("/status");
+  willTopic = String("duo") + String("/") + macAddressToString(false) + String("/status");
 
-  // client.connect(client_id);
-  // return connect(id, NULL, NULL, 0, QOS0, 0, 0, true);
-  // connect(id, user, pass, 0, QOS0, 0, 0, true);
-  // bool connect(const char *id, const char *user, const char *pass, const char* willTopic, EMQTT_QOS willQos, uint8_t willRetain, const char* willMessage, bool cleanSession, MQTT_VERSION version = MQTT_V311);
-  client.connect(client_id, NULL, NULL, willTopic, MQTT::EMQTT_QOS::QOS0, 0, "offline", true);
+  connect();
 
-  if (client.isConnected())
-  {
-    client.publish(willTopic, "online", true);
+  // Publish config payloads
+  client.publish(duo_solar_monitor_state.getConfigTopic(), duo_solar_monitor_state.getConfigPayload());
+  client.publish(battery_thumper_80ah_voltage.getConfigTopic(), battery_thumper_80ah_voltage.getConfigPayload());
+  client.publish(solarpanel_350watt_current.getConfigTopic(), solarpanel_350watt_current.getConfigPayload());
 
-    code_debug_print("Connected to broker");
+  // Publish attributes payloads
+  client.publish(duo_solar_monitor_state.getAttributesTopic(), duo_solar_monitor_state.getAttributesPayload());
+  client.publish(battery_thumper_80ah_voltage.getAttributesTopic(), battery_thumper_80ah_voltage.getAttributesPayload());
+  client.publish(solarpanel_350watt_current.getAttributesTopic(), solarpanel_350watt_current.getAttributesPayload());
 
-    // device memory configuration
-    // needs to occur after connection to network
-    deviceConfig();
+  // // client.connect(client_id);
+  // // return connect(id, NULL, NULL, 0, QOS0, 0, 0, true);
+  // // connect(id, user, pass, 0, QOS0, 0, 0, true);
+  // // bool connect(const char *id, const char *user, const char *pass, const char* willTopic, EMQTT_QOS willQos, uint8_t willRetain, const char* willMessage, bool cleanSession, MQTT_VERSION version = MQTT_V311);
+  // client.connect(client_id, NULL, NULL, willTopic, MQTT::EMQTT_QOS::QOS0, 0, "offline", true);
 
-    // Publish config payloads
-    client.publish(duo_solar_monitor_state.getConfigTopic(), duo_solar_monitor_state.getConfigPayload());
-    client.publish(battery_thumper_80ah_voltage.getConfigTopic(), battery_thumper_80ah_voltage.getConfigPayload());
-    client.publish(solarpanel_350watt_current.getConfigTopic(), solarpanel_350watt_current.getConfigPayload());
+  // if (client.isConnected())
+  // {
+  //   client.publish(willTopic, "online", true);
 
-    // Publish attributes payloads
-    client.publish(duo_solar_monitor_state.getAttributesTopic(), duo_solar_monitor_state.getAttributesPayload());
-    client.publish(battery_thumper_80ah_voltage.getAttributesTopic(), battery_thumper_80ah_voltage.getAttributesPayload());
-    client.publish(solarpanel_350watt_current.getAttributesTopic(), solarpanel_350watt_current.getAttributesPayload());
-  }
+  //   code_debug_print("Connected to broker");
+
+  //   // device memory configuration
+  //   // needs to occur after connection to network
+  //   deviceConfig();
+
+  //   // Publish config payloads
+  //   client.publish(duo_solar_monitor_state.getConfigTopic(), duo_solar_monitor_state.getConfigPayload());
+  //   client.publish(battery_thumper_80ah_voltage.getConfigTopic(), battery_thumper_80ah_voltage.getConfigPayload());
+  //   client.publish(solarpanel_350watt_current.getConfigTopic(), solarpanel_350watt_current.getConfigPayload());
+
+  //   // Publish attributes payloads
+  //   client.publish(duo_solar_monitor_state.getAttributesTopic(), duo_solar_monitor_state.getAttributesPayload());
+  //   client.publish(battery_thumper_80ah_voltage.getAttributesTopic(), battery_thumper_80ah_voltage.getAttributesPayload());
+  //   client.publish(solarpanel_350watt_current.getAttributesTopic(), solarpanel_350watt_current.getAttributesPayload());
+  // }
+  lastReconnectAttempt = 0;
 }
 
 // put your main code here, to run repeatedly:
 void loop() {
 
-  if (client.isConnected())
-  {
-    // client.loop();
+  unsigned long now = millis();
 
-    // Publish measurements
-    devicePublish();
-    voltageMeasurement();
-    acs712Measurement();
+  if (client.isConnected()) {
+    client.loop();
   }
 
-  delay(SAMPLE_INTERVAL);
+  {
+    if (!client.isConnected())
+    {
+      if (now - lastReconnectAttempt > 5000)
+      {
+        lastReconnectAttempt = now;
+        // Attempt to reconnect
+        if (connect())
+        {
+          lastReconnectAttempt = 0;
+        }
+      }
+    }
+    else
+    {
+      // Client connected
+      client.loop();
+    }
 
+    if (now - samplePreviousMillis >= SAMPLE_INTERVAL)
+    {
+      if (client.isConnected())
+      {
+        samplePreviousMillis = now;
+        devicePublish();
+        voltageMeasurement();
+        acs712Measurement();
+      }
+    }
+  }
 }
